@@ -1,0 +1,125 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ROLE {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+enum Sex {
+  MALE
+  FEMALE
+}
+
+model user {
+  id           Int          @id @default(autoincrement())
+  username     String       @unique
+  email        String       @unique
+  full_name    String
+  profilePhoto String
+  coverPhoto   String
+  sex          Sex?
+  phone_number String
+  password     String
+  role         ROLE         @default(STUDENT)
+  is_active    Boolean      @default(false)
+  created_at   DateTime     @default(now())
+  updated_at   DateTime     @updatedAt
+  courses      course[]
+  lesson       lessons[]
+  enrollements enrollment[]
+}
+
+model course {
+  id                 Int          @id @default(autoincrement())
+  userId             Int
+  course_img         String
+  cover_img          String?
+  preview_course_url String
+  title              String
+  description        String?
+  is_published       Boolean      @default(false)
+  price              Float
+  created_at         DateTime     @default(now())
+  updated_at         DateTime     @updatedAt
+  users              user         @relation(fields: [userId], references: [id])
+  chapters           chapter[]
+  enrollments        enrollment[]
+
+  lesson lessons[]
+}
+
+model chapter {
+  id           String    @id @default(uuid())
+  userId       Int
+  courseId     Int
+  chapterTitle String
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  courses      course    @relation(fields: [courseId], references: [id])
+  lesson       lessons[]
+}
+
+model lessons {
+  id           String   @id @default(uuid())
+  userId       Int
+  courseId     Int
+  chapterId    String
+  title        String
+  content      String
+  video_url    String?
+  is_completed Boolean? @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+  users        user     @relation(fields: [userId], references: [id])
+  chapters     chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  courses      course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+enum EnrollmentStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+model enrollment {
+  id          String           @id @default(uuid())
+  userId      Int
+  courseId    Int
+  is_enrolled Boolean          @default(false)
+  progress    Float            @default(0.0)
+  status      EnrollmentStatus @default(IN_PROGRESS)
+  created_at  DateTime         @default(now())
+  updated_at  DateTime         @updatedAt
+  users       user             @relation(fields: [userId], references: [id])
+  course      course           @relation(fields: [courseId], references: [id])
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model payment {
+  id         String        @id @default(uuid())
+  userId     Int
+  courseId   Int
+  price      Float
+  status     PaymentStatus @default(PENDING)
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
+}
