@@ -9,11 +9,12 @@ const prisma = new PrismaClient();
 export const createEnrollement = async (req: Request, res: Response) => {
   try {
     const data: icreatedEnrollment = req.body;
-
+    console.log(data);
     if (
       !data.userId ||
       !data.courseId ||
       data.isEnrolled === undefined ||
+      !data.paymentId ||
       !Object.values(EnrollmentStatus).includes(data.status)
     ) {
       res.status(400).json({
@@ -56,6 +57,7 @@ export const createEnrollement = async (req: Request, res: Response) => {
         progress: data.progress,
         status: data.status,
         is_enrolled: data.isEnrolled,
+        paymentId: data.paymentId,
       },
       include: {
         course: true,

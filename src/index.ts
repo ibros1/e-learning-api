@@ -3,12 +3,14 @@ import env from "dotenv";
 import userRoute from "./routes/userRoute";
 import courseRoute from "./routes/courseRoute";
 import lessonRoute from "./routes/lessonRoute";
+import lessonProgress from "./routes/lessonProggress";
 import enrollementRoute from "./routes/enrollmentRouter";
 import paymentRoute from "./routes/paymentRoute";
 import chapterRoute from "./routes/chapterRoute";
 import cors from "cors";
 import path from "path";
 import multer from "multer";
+import { multerErrorHandler } from "../middleware/limit.image.middleWare";
 env.config();
 const app = express();
 app.use(express.json());
@@ -30,6 +32,9 @@ app.use("/courses/chapters", chapterRoute);
 app.use("/courses/lessons", lessonRoute);
 app.use("/enrollement", enrollementRoute);
 app.use("/payments", paymentRoute);
+app.use("/lessons/progress", lessonProgress);
+// **Place multer error handler after all routes**
+app.use(multerErrorHandler);
 
 app.listen(PORT, () => {
   console.log(`your server is running on ${PORT}`);

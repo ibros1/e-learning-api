@@ -5,6 +5,7 @@ export interface icreatedEnrollment {
   courseId: number;
   progress: number;
   status: EnrollmentStatus;
+  paymentId: string;
   isEnrolled: boolean;
 }
 

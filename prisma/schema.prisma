@@ -40,7 +40,9 @@ model user {
   updated_at   DateTime     @updatedAt
   courses      course[]
   lesson       lessons[]
+  lessonProgress lessonProgress[]
   enrollements enrollment[]
+  payments payment[]
 }
 
 model course {
@@ -58,8 +60,9 @@ model course {
   users              user         @relation(fields: [userId], references: [id])
   chapters           chapter[]
   enrollments        enrollment[]
-
   lesson lessons[]
+  lessonProgress lessonProgress[]
+  payments payment[]
 }
 
 model chapter {
@@ -84,10 +87,28 @@ model lessons {
   is_completed Boolean? @default(false)
   created_at   DateTime @default(now())
   updated_at   DateTime @updatedAt
+  lessonProgress lessonProgress[]
   users        user     @relation(fields: [userId], references: [id])
   chapters     chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
   courses      course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 }
+
+model lessonProgress {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  lessonId   String
+  courseId   Int
+  isCompleted Boolean  @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user    user     @relation(fields: [userId], references: [id])
+  lesson  lessons  @relation(fields: [lessonId], references: [id])
+  course  course   @relation(fields: [courseId], references: [id])
+
+  @@unique([userId, lessonId]) // prevent duplicate tracking
+}
+
 
 enum EnrollmentStatus {
   IN_PROGRESS
@@ -99,27 +120,50 @@ model enrollment {
   id          String           @id @default(uuid())
   userId      Int
   courseId    Int
+  paymentId   String @unique
   is_enrolled Boolean          @default(false)
   progress    Float            @default(0.0)
   status      EnrollmentStatus @default(IN_PROGRESS)
   created_at  DateTime         @default(now())
   updated_at  DateTime         @updatedAt
+
   users       user             @relation(fields: [userId], references: [id])
   course      course           @relation(fields: [courseId], references: [id])
 }
 
 enum PaymentStatus {
   PENDING
-  COMPLETED
+  PAID
   FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  ZAAD
+  E_DAHAB
+  
+}
+
+enum Currency {
+  USD
+  SOS
 }
 
 model payment {
   id         String        @id @default(uuid())
   userId     Int
   courseId   Int
-  price      Float
+  enrollementId String? 
+  phone_Number String
+  amount      Float
+  currency Currency
   status     PaymentStatus @default(PENDING)
+  payment_method PaymentMethod 
+  isEnrolled Boolean @default(false)
+  transaction_date DateTime @default(now())
   created_at DateTime      @default(now())
   updated_at DateTime      @updatedAt
+  user user @relation(fields: [userId], references: [id])
+  course course @relation(fields: [courseId], references: [id])
+ 
 }
