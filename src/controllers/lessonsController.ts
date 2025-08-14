@@ -304,7 +304,7 @@ export const getOneLesson = async (req: Request, res: Response) => {
 export const deleteLesson = async (req: Request, res: Response) => {
   try {
     const { lessonId } = req.params;
-    console.log(lessonId);
+
     // check if the lesson exists
     const lesson = await prisma.lessons.findUnique({
       where: {

@@ -85,7 +85,11 @@ export const getAllCourses = async (req: Request, res: Response) => {
   try {
     const courses = await prisma.course.findMany({
       include: {
-        chapters: true,
+        chapters: {
+          include: {
+            lesson: true,
+          },
+        },
         enrollments: true,
         users: {
           select: {
@@ -272,6 +276,10 @@ export const deleteCourse = async (req: Request, res: Response) => {
       where: {
         courseId: course.id,
       },
+    });
+    // 4. Delete payments (fix foreign key error)
+    await prisma.payment.deleteMany({
+      where: { courseId: course.id },
     });
 
     // 4. Finally delete the course

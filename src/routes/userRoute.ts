@@ -25,6 +25,7 @@ router.post(
   ]),
   registerUserSchema,
   validtionMidlleware,
+
   createUser
 );
 
@@ -48,11 +49,16 @@ router.put(
     { name: "coverPhoto", maxCount: 1 },
   ]),
   authenticate,
-
+  authorize(["ADMIN"]),
   updateRole
 );
 
 router.get("/me", authenticate, getMe);
-router.delete("/delete/:userId", deleteUser);
+router.delete(
+  "/delete/:userId",
+  authenticate,
+  authorize(["ADMIN"]),
+  deleteUser
+);
 
 export default router;

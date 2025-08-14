@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 export const createEnrollement = async (req: Request, res: Response) => {
   try {
     const data: icreatedEnrollment = req.body;
-    console.log(data);
+
     if (
       !data.userId ||
       !data.courseId ||

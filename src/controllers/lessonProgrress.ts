@@ -143,7 +143,17 @@ export const getCompletedLessons = async (req: Request, res: Response) => {
         isCompleted: true,
       },
       include: {
-        lesson: true,
+        lesson: {
+          select: {
+            courses: {
+              select: {
+                title: true,
+                course_img: true,
+                price: true,
+              },
+            },
+          },
+        },
       },
     });
     console.log(completed);

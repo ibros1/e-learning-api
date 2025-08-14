@@ -393,7 +393,7 @@ export const loginUser = async (req: Request, res: Response) => {
 export const updateRole = async (req: Request, res: Response) => {
   try {
     const data: iUpdatedRole = req.body;
-    console.log(data);
+
     if (!data.email || !data.role) {
       res.status(400).json({
         isSuccess: false,
