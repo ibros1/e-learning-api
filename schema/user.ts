@@ -3,39 +3,59 @@ import { PrismaClient } from "@prisma/client";
 const Prisma = new PrismaClient();
 export const registerUserSchema = [
   body("username")
+    .trim()
     .isString()
-    .isLength({ min: 2, max: 32 })
-    .withMessage("Username must be between 2 and 12 characters.")
-    .notEmpty(),
+    .isLength({ min: 3, max: 20 })
+    .withMessage("Username must be between 3 and 20 characters")
+
+    .notEmpty()
+    .custom(async (value) => {
+      const user = await Prisma.user.findFirst({
+        where: {
+          username: {
+            equals: value,
+            mode: "insensitive",
+          },
+        },
+      });
+      if (user) throw new Error("Username already taken");
+    }),
 
   body("email")
+    .trim()
+    .toLowerCase()
     .isEmail()
-    .withMessage("Email must be a valid email address.")
-    .notEmpty(),
+    .withMessage("Valid email required")
+    .custom(async (value) => {
+      const user = await Prisma.user.findFirst({
+        where: { email: value },
+      });
+      if (user) throw new Error("Email already registered");
+    }),
 
-  body("fullName") // Corrected from fullname to fullName
+  body("fullName")
+    .trim()
     .isString()
-    .isLength({ min: 2, max: 30 })
-    .withMessage("Full name must be between 2 and 30 characters.")
-    .notEmpty(),
+    .isLength({ min: 2, max: 50 })
+    .withMessage("Full name must be 2-50 characters"),
 
   body("phone_number")
-    .isString()
-    .isLength({ min: 7, max: 16 })
-    .withMessage("Valid phone number is required.")
-    .notEmpty(),
+    .trim()
+    .isMobilePhone("any")
+    .withMessage("Invalid phone number format"),
+
+  body("sex")
+    .isIn(["male", "female", "other"])
+    .withMessage("Invalid gender selection"),
 
   body("password")
     .isString()
     .isLength({ min: 2, max: 64 })
-    .withMessage("Password must be between 2 and 64 characters.")
-    .notEmpty(),
+    .withMessage("Password must be 2+ characters at least"),
 
   body("comfirmPassword")
-    .isString()
-    .isLength({ min: 2, max: 64 })
-    .notEmpty()
-    .withMessage("comfirm password is reuired to match password"),
+    .custom((value, { req }) => value === req.body.password)
+    .withMessage("Passwords do not match"),
 ];
 
 export const loginUserSchema = [

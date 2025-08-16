@@ -12,6 +12,7 @@ import jwt from "jsonwebtoken";
 import { AuthRequest } from "../../types/request";
 import { generateWebToken } from "../../helpers/jwt";
 import { saveBase64Image } from "../constants/base64Img";
+import { deleteFromCloudinary, getPublicIdFromUrl } from "../utils/cloudinary";
 const Prisma = new PrismaClient();
 // Helper to save base64 image
 
@@ -21,43 +22,58 @@ export const createUser = async (
 ): Promise<void> => {
   try {
     const data = req.body;
-
+    console.log(data);
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
-    // File upload (multipart/form-data)
-    let profilePhoto = files?.profilePhoto?.[0]?.filename;
-    let coverPhoto = files?.coverPhoto?.[0]?.filename;
+    // Get Cloudinary URLs
+    const profilePhoto = files?.profilePhoto?.[0]?.path;
+    const coverPhoto = files?.coverPhoto?.[0]?.path;
 
-    // Base64 fallback
-    if (!profilePhoto && data.profilePhoto?.startsWith("data:image")) {
-      profilePhoto = saveBase64Image(
-        data.profilePhoto,
-        `profile-${Date.now()}`
-      );
-    }
+    // Validate required fields
+    const requiredFields = [
+      "email",
+      "password",
+      "username",
+      "fullName",
+      "phone_number",
+      "comfirmPassword",
+      "sex",
+    ];
 
-    if (!coverPhoto && data.coverPhoto?.startsWith("data:image")) {
-      coverPhoto = saveBase64Image(data.coverPhoto, `cover-${Date.now()}`);
-    }
+    const missingFields = requiredFields.filter((field) => !data[field]);
 
-    // Validate all required fields
-    if (
-      !data.email ||
-      !data.password ||
-      !data.username ||
-      !data.fullName ||
-      !data.phone_number ||
-      !data.comfirmPassword ||
-      !profilePhoto ||
-      !coverPhoto ||
-      !data.sex
-    ) {
+    if (missingFields.length > 0 || !profilePhoto || !coverPhoto) {
       res.status(400).json({
         isSuccess: false,
-        message: "Please provide all required fields",
+        message: `Missing required fields: ${[
+          ...missingFields,
+          !profilePhoto ? "profilePhoto" : "",
+          !coverPhoto ? "coverPhoto" : "",
+        ]
+          .filter(Boolean)
+          .join(", ")}`,
       });
       return;
     }
+
+    // // Validate all required fields
+    // if (
+    //   !data.email ||
+    //   !data.password ||
+    //   !data.username ||
+    //   !data.fullName ||
+    //   !data.phone_number ||
+    //   !data.comfirmPassword ||
+    //   !profilePhoto ||
+    //   !coverPhoto ||
+    //   !data.sex
+    // ) {
+    //   res.status(400).json({
+    //     isSuccess: false,
+    //     message: "Please provide all required fields",
+    //   });
+    //   return;
+    // }
 
     // Check password match
     if (data.password !== data.comfirmPassword) {
@@ -82,10 +98,15 @@ export const createUser = async (
     }
 
     // Check if username exists
+    // In createUser function:
     const usernameTaken = await Prisma.user.findFirst({
-      where: { username: data.username },
+      where: {
+        username: {
+          equals: data.username,
+          mode: "insensitive",
+        },
+      },
     });
-
     if (usernameTaken) {
       res.status(400).json({
         isSuccess: false,
@@ -112,12 +133,21 @@ export const createUser = async (
       },
     });
 
+    const { password, ...rest } = newUser;
+
     res.status(201).json({
       isSuccess: true,
       message: "Successfully created user",
-      user: newUser,
+      user: rest,
     });
   } catch (error) {
+    if (req.files) {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      await Promise.all([
+        deleteFromCloudinary(files?.profilePhoto?.[0]?.filename),
+        deleteFromCloudinary(files?.coverPhoto?.[0]?.filename),
+      ]);
+    }
     console.error("Create user error:", error);
     res.status(500).json({
       isSuccess: false,
@@ -192,13 +222,15 @@ export const getOneUser = async (req: Request, res: Response) => {
 export const updateUser = async (req: AuthRequest, res: Response) => {
   try {
     const data = req.body as iUpdatedUser;
+    console.log(data);
 
     const files = req.files as {
       [fieldname: string]: Express.Multer.File[];
     };
 
-    const profilePhoto = files?.profilePhoto?.[0]?.filename;
-    const coverPhoto = files?.coverPhoto?.[0]?.filename;
+    // Halkaan waxaad helaysaa URL-ada Cloudinary
+    const profilePhoto = files?.profilePhoto?.[0]?.path;
+    const coverPhoto = files?.coverPhoto?.[0]?.path;
 
     if (
       !data.id ||
@@ -266,6 +298,13 @@ export const deleteUser = async (req: Request, res: Response) => {
         id: +userId,
       },
     });
+    if (user) {
+      // Delete user's images from Cloudinary
+      await Promise.all([
+        deleteFromCloudinary(getPublicIdFromUrl(user.profilePhoto)!),
+        deleteFromCloudinary(getPublicIdFromUrl(user.coverPhoto)!),
+      ]);
+    }
 
     if (!user) {
       res.status(404).json({

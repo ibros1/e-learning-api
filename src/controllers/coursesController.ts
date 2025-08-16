@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { iCreatedCourse, iUpdatedCourse } from "../../types/course.interface";
 import { AuthRequest } from "../../types/request";
 import { saveBase64Image } from "../constants/base64Img";
+import { deleteFromCloudinary, getPublicIdFromUrl } from "../utils/cloudinary";
 
 const prisma = new PrismaClient();
 
@@ -11,18 +12,16 @@ export const createCourse = async (req: AuthRequest, res: Response) => {
     const data: iCreatedCourse = req.body;
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const course_img = files?.course_img?.[0]?.path;
+    const cover_img = files?.cover_img?.[0]?.path;
+    // // Base64 fallback
+    // if (!course_img && data.course_img?.startsWith("data:image")) {
+    //   course_img = saveBase64Image(data.course_img, `course_img-${Date.now()}`);
+    // }
 
-    let course_img = files?.course_img?.[0]?.filename;
-    let cover_img = files?.cover_img?.[0]?.filename;
-
-    // Base64 fallback
-    if (!course_img && data.course_img?.startsWith("data:image")) {
-      course_img = saveBase64Image(data.course_img, `course_img-${Date.now()}`);
-    }
-
-    if (!cover_img && data.cover_img?.startsWith("data:image")) {
-      cover_img = saveBase64Image(data.cover_img, `cover_img-${Date.now()}`);
-    }
+    // if (!cover_img && data.cover_img?.startsWith("data:image")) {
+    //   cover_img = saveBase64Image(data.cover_img, `cover_img-${Date.now()}`);
+    // }
     if (
       !data.title ||
       !course_img ||
@@ -73,6 +72,15 @@ export const createCourse = async (req: AuthRequest, res: Response) => {
       course,
     });
   } catch (error) {
+    if (req.files) {
+      const files = req.files as {
+        [fieldname: string]: Express.Multer.File[];
+      };
+      await Promise.all([
+        deleteFromCloudinary(files?.course_img?.[0]?.filename),
+        deleteFromCloudinary(files?.cover_img?.[0]?.filename),
+      ]);
+    }
     console.error(error);
     res.status(500).json({
       isSuccess: false,
@@ -126,20 +134,18 @@ export const getAllCourses = async (req: Request, res: Response) => {
 export const updateCourse = async (req: AuthRequest, res: Response) => {
   try {
     const data: iUpdatedCourse = req.body;
-
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-
-    let course_img = files?.course_img?.[0]?.filename;
-    let cover_img = files?.cover_img?.[0]?.filename;
+    const course_img = files?.course_img?.[0]?.path;
+    const cover_img = files?.cover_img?.[0]?.path;
 
     // Base64 fallback
-    if (!course_img && data.course_img?.startsWith("data:image")) {
-      course_img = saveBase64Image(data.course_img, `course_img-${Date.now()}`);
-    }
+    // if (!course_img && data.course_img?.startsWith("data:image")) {
+    //   course_img = saveBase64Image(data.course_img, `course_img-${Date.now()}`);
+    // }
 
-    if (!cover_img && data.cover_img?.startsWith("data:image")) {
-      cover_img = saveBase64Image(data.cover_img, `cover_img-${Date.now()}`);
-    }
+    // if (!cover_img && data.cover_img?.startsWith("data:image")) {
+    //   cover_img = saveBase64Image(data.cover_img, `cover_img-${Date.now()}`);
+    // }
     if (
       !data.title ||
       !data.description ||
@@ -281,6 +287,14 @@ export const deleteCourse = async (req: Request, res: Response) => {
     await prisma.payment.deleteMany({
       where: { courseId: course.id },
     });
+
+    if (course) {
+      // Delete course images from Cloudinary
+      await Promise.all([
+        deleteFromCloudinary(getPublicIdFromUrl(course.course_img)!),
+        deleteFromCloudinary(getPublicIdFromUrl(course.cover_img!)!),
+      ]);
+    }
 
     // 4. Finally delete the course
     const deletingCourse = await prisma.course.delete({

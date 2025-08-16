@@ -12,46 +12,41 @@ import {
 import { loginUserSchema, registerUserSchema } from "../../schema/user";
 import { validtionMidlleware } from "../../middleware/validation";
 import { authenticate } from "../../middleware/authenthicate.middleware";
-import { upload } from "../../middleware/upload";
 import { authorize } from "../../middleware/authorize";
-
+import upload from "../../middleware/upload";
+import { multerErrorHandler } from "../../middleware/limit.image.middleWare";
+import { userUpload } from "../utils/cloudinary";
 const router = Router();
 
+// Apply multer error handler middleware first
+router.use(multerErrorHandler);
 router.post(
   "/create",
-  upload.fields([
+  // Process files FIRST
+  userUpload.fields([
     { name: "profilePhoto", maxCount: 1 },
     { name: "coverPhoto", maxCount: 1 },
   ]),
+  // Then validate
   registerUserSchema,
   validtionMidlleware,
-
   createUser
 );
-
 router.post("/login", loginUserSchema, validtionMidlleware, loginUser);
 router.get("/list", getAllUsers);
 router.get("/list/:userId", getOneUser);
+
 router.put(
   "/update",
-  upload.fields([
+  authenticate,
+  userUpload.fields([
     { name: "profilePhoto", maxCount: 1 },
     { name: "coverPhoto", maxCount: 1 },
   ]),
-
   updateUser
 );
 
-router.put(
-  "/role/update",
-  upload.fields([
-    { name: "profilePhoto", maxCount: 1 },
-    { name: "coverPhoto", maxCount: 1 },
-  ]),
-  authenticate,
-  authorize(["ADMIN"]),
-  updateRole
-);
+router.put("/role/update", authenticate, authorize(["ADMIN"]), updateRole);
 
 router.get("/me", authenticate, getMe);
 router.delete(

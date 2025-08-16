@@ -156,7 +156,7 @@ export const getCompletedLessons = async (req: Request, res: Response) => {
         },
       },
     });
-    console.log(completed);
+
     if (!completed) {
       res.status(404).json({
         isSuccess: false,

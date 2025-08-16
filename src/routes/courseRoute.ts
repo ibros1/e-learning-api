@@ -14,16 +14,17 @@ import { validtionMidlleware } from "../../middleware/validation";
 import { authenticate } from "../../middleware/authenthicate.middleware";
 import multer from "multer";
 import path from "path";
-import { upload } from "../../middleware/upload";
+import { courseUpload } from "../utils/cloudinary";
 import { authorize } from "../../middleware/authorize";
 import { extractFileNames } from "../../middleware/extractFileNames";
+import { multerErrorHandler } from "../../middleware/limit.image.middleWare";
 // Configure storage for uploaded files (adjust destination as needed)
 
 const router = Router();
-
+router.use(multerErrorHandler);
 router.post(
   "/create",
-  upload.fields([
+  courseUpload.fields([
     { name: "course_img", maxCount: 1 },
     { name: "cover_img", maxCount: 1 },
   ]),
@@ -35,7 +36,7 @@ router.post(
 router.get("", getAllCourses);
 router.put(
   "/update",
-  upload.fields([
+  courseUpload.fields([
     { name: "course_img", maxCount: 1 },
     { name: "cover_img", maxCount: 1 },
   ]),

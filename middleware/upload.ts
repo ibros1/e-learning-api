@@ -1,20 +1,18 @@
 import multer from "multer";
+import { storage } from "../src/utils/cloudinary";
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); // or any folder you want
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = Date.now() + "-" + file.originalname;
-    cb(null, uniqueName);
-  },
-});
-
-// Add limits here to increase max field size (default is about 1MB)
-export const upload = multer({
-  storage,
+const upload = multer({
+  storage: storage,
   limits: {
-    fieldSize: 10 * 1024 * 1024, // 10 MB, adjust if needed
-    fileSize: 5 * 1024 * 1024, // max file size 5 MB (adjust as needed)
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only images are allowed!"));
+    }
   },
 });
+
+export default upload;
